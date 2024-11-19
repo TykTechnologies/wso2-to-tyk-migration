@@ -77,3 +77,4 @@ If you encounter issues, consider the following:
 - **Connectivity**: Ensure both WSO2 and Tyk instances are reachable from the machine running the script.
 - **Authentication**: Verify that the `wso2_username`, `wso2_password`, and `tyk_token` credentials are correct.
 - **Self-Signed Certificates**: For APIs migrated with self-signed certificates, verify that Tyk is configured to either trust the certificate or skip SSL verification.
+- **Invalid Migration Data**: For APIs migrated with a `localhost` target, the migrated data may need to be amended so that the Tyk gateway targets the correct host.
