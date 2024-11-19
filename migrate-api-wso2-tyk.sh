@@ -105,7 +105,7 @@ validate_tyk_environment() {
     local tyk_token=$2
 
     local status_code
-    status_code=$(curl -o /dev/null -s -w "%{http_code}" -H "Authorization: $tyk_token" "$tyk_host/api/apis")
+    status_code=$(curl -k -o /dev/null -s -w "%{http_code}" -H "Authorization: $tyk_token" "$tyk_host/api/apis")
     
     if [ "$status_code" -ne 200 ]; then
         log_error "Could not connect to Tyk Dashboard"
@@ -146,7 +146,7 @@ migrate_apis() {
 
         # Import API to Tyk
         local import_response
-        import_response=$(curl -X POST -s "$tyk_host/api/apis/oas/import?listenPath={$base_path}&upstreamURL=${production_endpoint}" \
+        import_response=$(curl -X POST -k -s "$tyk_host/api/apis/oas/import?listenPath={$base_path}&upstreamURL=${production_endpoint}" \
             -H "Authorization: $tyk_token" \
             -H "Content-Type: application/json" \
             -d "$swagger")
