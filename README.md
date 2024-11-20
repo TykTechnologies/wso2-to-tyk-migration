@@ -65,7 +65,7 @@ Here’s an example command to use the script. It sets the WSO2 host to `https:/
 The script currently migrates the following API attributes:
 - Name
 - Listen path
-- Upstream target
+- Upstream target (limited to the first production URL)
 - Endpoint paths
 
 Other API information, such as policies, security configurations, and documentation, must be migrated manually.
