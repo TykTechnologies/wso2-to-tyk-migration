@@ -19,6 +19,11 @@ log_info() {
     echo "INFO: $*"
 }
 
+log_warning() {
+    echo "WARNING: $*"
+}
+
+
 # Version comparison function
 version_ge() {
     printf '%s\n%s\n' "$2" "$1" | sort -C -V
@@ -71,30 +76,40 @@ setup_wso2_environment() {
     local wso2_host=$1
     local wso2_username=$2
     local wso2_password=$3
-    
     local wso2_envs=$(apictl get envs)
-
+    
     # Check and manage migration environment
     if echo "$wso2_envs" | grep -q "$WSO2_ENV_NAME"; then
         local existing_host
         existing_host=$(echo "$wso2_envs" | grep "$WSO2_ENV_NAME" | awk '{print $2}')
         
         if [[ "$existing_host" != "$wso2_host" ]]; then
-            log_error "WSO2 migration environment already exists, but with a different host"
-            log_error "Remove the environment and retry:"
-            log_error "  apictl remove env $WSO2_ENV_NAME"
-            exit 1
+            log_warning "WSO2 migration environment already exists with host: $existing_host"
+            log_warning "New host to be configured: $wso2_host"
+            
+            read -p "Do you want to recreate the environment with the new host? (y/n): " answer
+            
+            if [[ "$answer" =~ ^[Yy]$ ]]; then
+                log_info "Removing existing environment..."
+                apictl remove env "$WSO2_ENV_NAME"
+                
+                log_info "Creating WSO2 environment $WSO2_ENV_NAME with new host"
+                apictl add env "$WSO2_ENV_NAME" --apim "$wso2_host"
+            else
+                log_error "Operation cancelled by user. Exiting..."
+                exit 1
+            fi
+        else
+            log_info "Using existing WSO2 environment $WSO2_ENV_NAME"
         fi
-        
-        log_info "Using WSO2 environment $WSO2_ENV_NAME"
     else
         log_info "Creating WSO2 environment $WSO2_ENV_NAME"
         apictl add env "$WSO2_ENV_NAME" --apim "$wso2_host"
     fi
-
+    
     # Login to environment
     echo "$wso2_password" | apictl login "$WSO2_ENV_NAME" -u "$wso2_username" -k --password-stdin
-
+    
     # Clear any existing data from export directory
     rm -f $WSO2_EXPORT_PATH/*
 }
