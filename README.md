@@ -42,15 +42,15 @@ To use the script, provide the connection details for both the WSO2 environment 
 
 ### Example
 
-Here’s an example command to use the script. It sets the WSO2 host to `https://localhost:9443` and uses `admin`/`admin` as the credentials. It also sets the Tyk Dashboard URL to `http://localhost:3000` with an API token of `e6110fdeabe94da657f816e2243985a7`:
+Here’s an example command to use the script. It sets the WSO2 host to `https://source-wso2-publisher:9443` and uses `admin`/`admin` as the credentials. It also sets the Tyk Dashboard URL to `http://target-tyk-dashboard:3000` with an API token of `e6110fdeabe94da657f816e2243985a7`:
 
 ```shell
 ./migrate-api-wso2-tyk.sh \
-  https://localhost:9443 \
-  admin \
-  admin \
-  http://localhost:3000 \
-  e6110fdeabe94da657f816e2243985a7
+  --wso2-host https://source-wso2-publisher:9443 \
+  --wso2-username admin \
+  --wso2-password admin \
+  --tyk-host http://target-tyk-dashboard:3000 \
+  --tyk-token e6110fdeabe94da657f816e2243985a7
 ```
 
 ## Notes
@@ -74,7 +74,7 @@ Other API information, such as policies, security configurations, and documentat
 
 If you encounter issues, consider the following:
 
-- **Connectivity**: Ensure both WSO2 and Tyk instances are reachable from the machine running the script.
-- **Authentication**: Verify that the `wso2_username`, `wso2_password`, and `tyk_token` credentials are correct.
+- **Connectivity**: Ensure both WSO2 `wso2-host` and Tyk `tyk-host` instances are reachable from the machine running the script.
+- **Authentication**: Verify that the `wso2-username`, `wso2-password`, and `tyk-token` credentials are correct.
 - **Self-Signed Certificates**: For APIs migrated with self-signed certificates, verify that Tyk is configured to either trust the certificate or skip SSL verification.
 - **Invalid Migration Data**: For APIs migrated with a `localhost` target, the migrated data may need to be amended so that the Tyk gateway targets the correct host.
