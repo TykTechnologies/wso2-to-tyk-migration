@@ -23,7 +23,6 @@ log_warning() {
     echo "WARNING: $*"
 }
 
-
 # Version comparison function
 version_ge() {
     printf '%s\n%s\n' "$2" "$1" | sort -C -V
