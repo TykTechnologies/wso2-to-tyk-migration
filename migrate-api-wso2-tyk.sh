@@ -183,14 +183,13 @@ check_api_exists() {
     local tyk_token=$2
     local api_name=$3
     local api_listen_path=$4
-    local api_target_url=$5
     local response
     
     response=$(curl -X GET -k -s "$tyk_host/api/apis?p=-1" \
         -H "Authorization: $tyk_token")
     
-    echo "$response" | jq -e --arg name "$api_name" --arg target_url "$api_target_url" --arg listen_path "$api_listen_path" \
-        '.apis[] | select(.api_definition.name == $name and .api_definition.proxy.target_url == $target_url and .api_definition.proxy.listen_path == $listen_path)' >/dev/null
+    echo "$response" | jq -e --arg name "$api_name" --arg listen_path "$api_listen_path" \
+        '.apis[] | select(.api_definition.name == $name and .api_definition.proxy.listen_path == $listen_path)' >/dev/null
     
     return $?
 }
@@ -206,25 +205,23 @@ migrate_apis() {
     apictl export apis --format json -e "$WSO2_ENV_NAME"
 
     for file_path in "$WSO2_EXPORT_PATH"/*.zip; do
+        # Extract swagger document from API export archive
         local file_name=$(basename "$file_path")
-        
-        # Extract archive path and swagger
         local archive_path
         archive_path="${file_name/_/-}"     
         archive_path="${archive_path/_*}" 
         local swagger=$(unzip -p "$file_path" "$archive_path"/Definitions/swagger.json)
 
+        # Extract swagger data
         local title=$(echo "$swagger" | jq -r '.info.title')
         local version=$(echo "$swagger" | jq -r '.info.version')
-
-        # Extract swagger data
         local base_path=$(echo "$swagger" | jq -r '."x-wso2-basePath"')
         local base_path_encoded=$(echo "$base_path" | jq -R -r -s '@uri')
         local production_endpoint=$(echo "$swagger" | jq -r '."x-wso2-production-endpoints".urls[0]')
         local production_endpoint_encoded=$(echo "$production_endpoint" | jq -R -r -s '@uri')
         
         # Check if API already exists
-        if check_api_exists "$tyk_host" "$tyk_token" "$title" "$base_path" "$production_endpoint"; then
+        if check_api_exists "$tyk_host" "$tyk_token" "$title" "$base_path"; then
             log_info "Skipping existing API: $title v$version"
             ((skip_count++))
             continue
