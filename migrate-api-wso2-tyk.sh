@@ -134,6 +134,7 @@ migrate_apis() {
     local tyk_host=$1
     local tyk_token=$2
 
+    # Export all published APIs
     apictl export apis --format json -e "$WSO2_ENV_NAME"
 
     local migrate_count=0
@@ -151,16 +152,25 @@ migrate_apis() {
 
         local title
         title=$(echo "$swagger" | jq -r '.info.title')
+        local version
+        version=$(echo "$swagger" | jq -r '.info.version')
 
         # Extract override data
-        local base_path
-        base_path=$(echo "$swagger" | jq -r '."x-wso2-basePath" | @uri')
+        local base_path_encoded
+        base_path_encoded=$(echo "$swagger" | jq -r '."x-wso2-basePath" | @uri')
+        local production_endpoint_encoded
+        production_endpoint_encoded=$(echo "$swagger" | jq -r '."x-wso2-production-endpoints".urls[0] | @uri')
         local production_endpoint
-        production_endpoint=$(echo "$swagger" | jq -r '."x-wso2-production-endpoints".urls[0] | @uri')
+        production_endpoint=$(echo "$swagger" | jq -r '."x-wso2-production-endpoints".urls[0]')
+
+        if echo "$production_endpoint" | grep -qi "localhost"; then
+            log_warning "API '$title' v$version uses localhost in endpoint: $production_endpoint"
+            log_warning "This may cause connectivity issues in the target environment"
+        fi
 
         # Import API to Tyk
         local import_response
-        import_response=$(curl -X POST -k -s "$tyk_host/api/apis/oas/import?listenPath={$base_path}&upstreamURL=${production_endpoint}" \
+        import_response=$(curl -X POST -k -s "$tyk_host/api/apis/oas/import?listenPath={$base_path_encoded}&upstreamURL=${production_endpoint_encoded}" \
             -H "Authorization: $tyk_token" \
             -H "Content-Type: application/json" \
             -d "$swagger")
@@ -169,7 +179,7 @@ migrate_apis() {
         import_status=$(echo "$import_response" | jq -r '.Status')
 
         if [[ "$import_status" == "OK" ]]; then
-            log_info "Migrated $title"
+            log_info "Migrated $title v$version"
             ((migrate_count++))
         else
             log_error "Could not migrate $title: $(echo "$import_response" | jq -r '.Message')"
