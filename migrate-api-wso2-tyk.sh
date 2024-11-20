@@ -10,6 +10,54 @@ readonly REQUIRED_TOOLS=("apictl" "curl" "jq")
 readonly WSO2_EXPORT_PATH=~/.wso2apictl/exported/migration/"$WSO2_ENV_NAME"/tenant-default/apis
 readonly MINIMUM_APICTL_VERSION="4.4.0"
 
+# Parse parameters
+parse_params() {
+    local wso2_host=""
+    local wso2_username=""
+    local wso2_password=""
+    local tyk_host=""
+    local tyk_token=""
+
+    while [[ $# -gt 0 ]]; do
+        case $1 in
+            --wso2-host)
+                wso2_host="${2:-}"
+                shift 2
+                ;;
+            --wso2-username)
+                wso2_username="${2:-}"
+                shift 2
+                ;;
+            --wso2-password)
+                wso2_password="${2:-}"
+                shift 2
+                ;;
+            --tyk-host)
+                tyk_host="${2:-}"
+                shift 2
+                ;;
+            --tyk-token)
+                tyk_token="${2:-}"
+                shift 2
+                ;;
+            *)
+                log_error "Unknown parameter: $1"
+                exit 1
+                ;;
+        esac
+    done
+
+    # Validate required parameters
+    if [[ -z "$wso2_host" || -z "$wso2_username" || -z "$wso2_password" || -z "$tyk_host" || -z "$tyk_token" ]]; then
+        log_error "Missing required parameters"
+        echo "Usage: $SCRIPT_NAME --wso2-host HOST --wso2-username USER --wso2-password PASS --tyk-host HOST --tyk-token TOKEN"
+        exit 1
+    fi
+
+    # Return values
+    echo "$wso2_host $wso2_username $wso2_password $tyk_host $tyk_token"
+}
+
 # Logging functions
 log_error() {
     echo "ERROR: $*" >&2
@@ -211,11 +259,14 @@ migrate_apis() {
 
 # Main script execution
 main() {
-    validate_inputs "$@"
+    # Parse parameters
+    read -r wso2_host wso2_username wso2_password tyk_host tyk_token < <(parse_params "$@")
+
+    validate_inputs "$wso2_host" "$wso2_username" "$wso2_password" "$tyk_host" "$tyk_token"
     check_prerequisites
-    setup_wso2_environment "$1" "$2" "$3"
-    validate_tyk_environment "$4" "$5"
-    migrate_apis "$4" "$5"
+    setup_wso2_environment "$wso2_host" "$wso2_username" "$wso2_password"
+    validate_tyk_environment "$tyk_host" "$tyk_token"
+    migrate_apis "$tyk_host" "$tyk_token"
 }
 
 # Call main with all script arguments
