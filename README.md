@@ -29,16 +29,16 @@ Tyk assumes no liability for any issues arising from the use of this script. Use
 To use the script, provide the connection details for both the WSO2 environment (source) and the Tyk environment (destination). These details are passed as parameters to the script:
 
 ```shell
-./migrate_apis.sh <wso2_host> <wso2_username> <wso2_password> <tyk_host> <tyk_token>
+./migrate-api-wso2-tyk.sh <wso2-host> <wso2-username> <wso2-password> <tyk-host> <tyk-token>
 ```
 
 ### Script Parameters
 
-1. `wso2_host`: WSO2 API Manager hostname
-2. `wso2_username`: WSO2 login username
-3. `wso2_password`: WSO2 login password
-4. `tyk_host`: Tyk Dashboard URL
-5. `tyk_token`: Tyk Dashboard API authorization token
+1. `wso2-host`: WSO2 API Manager hostname
+2. `wso2-username`: WSO2 login username
+3. `wso2-password`: WSO2 login password
+4. `tyk-host`: Tyk Dashboard URL
+5. `tyk-token`: Tyk Dashboard API authorization token
 
 ### Example
 
@@ -55,10 +55,10 @@ Here’s an example command to use the script. It sets the WSO2 host to `https:/
 
 ## Notes
 
-- The script creates or uses a WSO2 apictl environment called wso2-to-tyk-migration.
-- Before running, it clears the WSO2 apictl export directory at `~/.wso2apictl/exported/migration/wso2-to-tyk-migration/tenant-default/apis`.
-- If migrating APIs that use self-signed certificates, ensure the Tyk Gateway is configured to [skip verification for upstream services](https://tyk.io/docs/tyk-oss-gateway/configuration/#proxy_ssl_insecure_skip_verify).
-- The script uses the -k flag with both `apictl` and `curl` to bypass SSL verification, as it is designed for Proof of Concept (PoC) environments that use self-signed certificates.
+- **WSO2 apictl Environment**: The script creates a WSO2 apictl environment named wso2-to-tyk-migration. If the environment already exists, it will reuse it.
+- **Export Directory Cleanup**: Before execution, the script clears the WSO2 apictl export directory located at: `~/.wso2apictl/exported/migration/wso2-to-tyk-migration/tenant-default/apis`.
+- **SSL Verification Bypass**: For proof of concept environments with self-signed certificates, the script uses the `-k` flag with both `apictl` and `curl` to bypass SSL verification.
+- **Duplicate API Handling**: The script skips duplicate APIs to avoid importing them multiple times.
 
 ## Limitations
 
