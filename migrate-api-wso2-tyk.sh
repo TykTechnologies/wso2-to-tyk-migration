@@ -129,40 +129,60 @@ validate_tyk_environment() {
     log_info "Connected to Tyk dashboard successfully"
 }
 
+# Check if API exists in Tyk
+check_api_exists() {
+    local tyk_host=$1
+    local tyk_token=$2
+    local api_name=$3
+    local api_listen_path=$4
+    local api_target_url=$5
+    local response
+    
+    response=$(curl -X GET -k -s "$tyk_host/api/apis?p=-1" \
+        -H "Authorization: $tyk_token")
+    
+    echo "$response" | jq -e --arg name "$api_name" --arg target_url "$api_target_url" --arg listen_path "$api_listen_path" \
+        '.apis[] | select(.api_definition.name == $name and .api_definition.proxy.target_url == $target_url and .api_definition.proxy.listen_path == $listen_path)' >/dev/null
+    
+    return $?
+}
+
 # API migration function
 migrate_apis() {
     local tyk_host=$1
     local tyk_token=$2
+    local migrate_count=0
+    local skip_count=0
 
     # Export all published APIs
     apictl export apis --format json -e "$WSO2_ENV_NAME"
 
-    local migrate_count=0
-    
     for file_path in "$WSO2_EXPORT_PATH"/*.zip; do
-        local file_name
-        file_name=$(basename "$file_path")
+        local file_name=$(basename "$file_path")
         
         # Extract archive path and swagger
         local archive_path
         archive_path="${file_name/_/-}"     
         archive_path="${archive_path/_*}" 
-        local swagger
-        swagger=$(unzip -p "$file_path" "$archive_path"/Definitions/swagger.json)
+        local swagger=$(unzip -p "$file_path" "$archive_path"/Definitions/swagger.json)
 
-        local title
-        title=$(echo "$swagger" | jq -r '.info.title')
-        local version
-        version=$(echo "$swagger" | jq -r '.info.version')
+        local title=$(echo "$swagger" | jq -r '.info.title')
+        local version=$(echo "$swagger" | jq -r '.info.version')
 
-        # Extract override data
-        local base_path_encoded
-        base_path_encoded=$(echo "$swagger" | jq -r '."x-wso2-basePath" | @uri')
-        local production_endpoint_encoded
-        production_endpoint_encoded=$(echo "$swagger" | jq -r '."x-wso2-production-endpoints".urls[0] | @uri')
-        local production_endpoint
-        production_endpoint=$(echo "$swagger" | jq -r '."x-wso2-production-endpoints".urls[0]')
+        # Extract swagger data
+        local base_path=$(echo "$swagger" | jq -r '."x-wso2-basePath"')
+        local base_path_encoded=$(echo "$base_path" | jq -R -r -s '@uri')
+        local production_endpoint=$(echo "$swagger" | jq -r '."x-wso2-production-endpoints".urls[0]')
+        local production_endpoint_encoded=$(echo "$production_endpoint" | jq -R -r -s '@uri')
+        
+        # Check if API already exists
+        if check_api_exists "$tyk_host" "$tyk_token" "$title" "$base_path" "$production_endpoint"; then
+            log_info "Skipping existing API: $title v$version"
+            ((skip_count++))
+            continue
+        fi
 
+        # Check for localhost in endpoint
         if echo "$production_endpoint" | grep -qi "localhost"; then
             log_warning "API '$title' v$version uses localhost in endpoint: $production_endpoint"
             log_warning "This may cause connectivity issues in the target environment"
@@ -186,7 +206,7 @@ migrate_apis() {
         fi        
     done
 
-    log_info "Migration complete - $migrate_count APIs migrated"
+    log_info "Migration complete - $migrate_count APIs migrated, $skip_count APIs skipped"
 }
 
 # Main script execution
